@@ -1,0 +1,68 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: admin
+      folder: nginx_connections_active
+      interval: 10s
+      rules:
+        - uid: c1f663ea-2294-4660-a853-6dd74c30f719
+          title: nginx_connections_active
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: c6566855-b3ec-4bf8-8385-5454c643a5b6
+              model:
+                disableTextWrap: false
+                editorMode: code
+                exemplar: false
+                expr: rate(nginx_connections_accepted{instance="192.168.33.11:9113"}[20s])
+                fullMetaSearch: false
+                includeNullMetadata: true
+                instant: true
+                interval: ""
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+                useBackend: false
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 10
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: avg
+                      type: query
+                datasource:
+                    name: Expression
+                    type: __expr__
+                    uid: __expr__
+                expression: ""
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: classic_conditions
+          noDataState: NoData
+          execErrState: Error
+          for: 15s
+          annotations:
+            summary: DDoS Attack HTTP
+          labels: {}
+          isPaused: false

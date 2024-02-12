@@ -1,0 +1,311 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # Définir la box à utiliser
+  config.vm.box = "ubuntu/bionic64"
+
+  # Configuration de la VM Prometheus
+  config.vm.define "prometheus" do |prometheus|
+    prometheus.vm.hostname = "prometheus"
+    prometheus.vm.network "private_network", ip: "192.168.33.10"
+    prometheus.vm.provider "virtualbox" do |v|
+      v.memory = 4096
+      v.cpus = 2
+    end
+    prometheus.vm.provision "shell", inline: <<-SHELL
+      # Installer les dépendances
+      sudo apt-get update
+      sudo apt-get install -y wget curl
+      # Télécharger et extraire le binaire prometheus
+      wget https://github.com/prometheus/prometheus/releases/download/v2.31.1/prometheus-2.31.1.linux-amd64.tar.gz
+      sleep 10
+      tar xzf prometheus-2.31.1.linux-amd64.tar.gz
+      # Créer le répertoire et copier les fichiers
+      sleep 20
+      sudo mkdir /etc/prometheus
+      sudo cp prometheus-2.31.1.linux-amd64/prometheus /usr/local/bin/
+      sudo cp prometheus-2.31.1.linux-amd64/promtool /usr/local/bin/
+      sudo cp -r prometheus-2.31.1.linux-amd64/consoles /etc/prometheus
+      sudo cp -r prometheus-2.31.1.linux-amd64/console_libraries /etc/prometheus
+      # Créer le fichier de configuration
+      sudo bash -c 'cat <<EOF > /etc/prometheus/prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["localhost:9090"]
+  - job_name: "node_exporter"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["192.168.33.11:9100"]
+  - job_name: "nginx"
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ["192.168.33.11:9113"]
+EOF'
+      # Créer le service systemd
+      sudo bash -c 'cat <<EOF > /etc/systemd/system/prometheus.service
+[Unit]
+Description=Prometheus
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/prometheus \
+  --config.file /etc/prometheus/prometheus.yml \
+  --storage.tsdb.path /var/lib/prometheus/ \
+  --web.console.templates=/etc/prometheus/consoles \
+  --web.console.libraries=/etc/prometheus/console_libraries
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+      # Créer l'utilisateur et le groupe prometheus
+      sudo useradd --no-create-home --shell /bin/false prometheus
+      sudo groupadd prometheus
+      # Créer le répertoire de stockage
+      sudo mkdir /var/lib/prometheus
+      # Changer les permissions
+      sudo chown prometheus:prometheus /var/lib/prometheus
+      sudo chown prometheus:prometheus /usr/local/bin/prometheus
+      sudo chown prometheus:prometheus /usr/local/bin/promtool
+      sudo chown -R prometheus:prometheus /etc/prometheus
+      # Démarrer et activer le service
+      sudo systemctl daemon-reload
+      sleep 5
+      sudo systemctl start prometheus
+      sleep 5
+      sudo systemctl enable prometheus
+    SHELL
+  end
+
+  # Configuration de la VM "web"
+  config.vm.define "web" do |web|
+    web.vm.network "private_network", ip: "192.168.33.11"
+    web.vm.provision "shell", inline: <<-SHELL
+
+      # Installer Nginx
+      sudo apt update
+      sudo apt install -y nginx
+
+      # Télécharger et installer le node_exporter
+      wget https://github.com/prometheus/node_exporter/releases/download/v1.2.2/node_exporter-1.2.2.linux-amd64.tar.gz
+      tar xzf node_exporter-1.2.2.linux-amd64.tar.gz
+      sudo cp node_exporter-1.2.2.linux-amd64/node_exporter /usr/local/bin/
+      
+      # Créer le service systemd pour node_exporter
+      sudo bash -c 'cat <<EOF > /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+
+      # Créer l'utilisateur et le groupe node_exporter
+      sudo useradd --no-create-home --shell /bin/false node_exporter
+      sudo groupadd node_exporter
+      sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
+      
+      # Démarrer et activer le service node_exporter
+      sudo systemctl daemon-reload
+      sudo systemctl start node_exporter
+      sudo systemctl enable node_exporter
+      
+      # Configurer le site par défaut pour exposer les métriques de Nginx
+      sudo bash -c 'cat <<EOF > /etc/nginx/sites-available/default
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+
+  index index.html index.htm index.nginx-debian.html;
+
+  server_name _;
+
+  root /var/www/html;
+
+  location / {
+          try_files $uri $uri/ =404;
+  }
+
+  location /metrics {
+  stub_status on;
+  access_log off;
+  allow 127.0.0.1;
+  allow 192.168.33.10;
+  deny all;
+
+  }
+
+}
+EOF'
+      # Rédémarrer NGINx
+      sudo systemctl restart nginx
+      # Installer nginx-prometheus-exporter
+      sudo apt update
+      sudo apt install snapd
+      sudo snap install nginx-prometheus-exporter --beta
+
+      # Démarrer et activer le service nginx-prometheus-exporter
+      sudo systemctl daemon-reload
+      sudo systemctl start nginx-prometheus-exporter
+      sudo systemctl enable nginx-prometheus-exporter
+
+      # Installer nginx-prometheus-exporter
+      wget https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v0.9.0/nginx-prometheus-exporter_0.9.0_linux_amd64.tar.gz
+      tar xzf nginx-prometheus-exporter_0.9.0_linux_amd64.tar.gz
+      sudo cp nginx-prometheus-exporter /usr/local/bin/
+
+      # Créer le service systemd pour nginx-prometheus-exporter
+      sudo bash -c 'cat <<EOF > /etc/systemd/system/nginx-prometheus-exporter.service
+[Unit]
+Description=Nginx Prometheus Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=root
+Group=root
+Type=simple
+ExecStart=/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://127.0.0.1/metrics
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+      
+      # Démarrer et activer le service nginx-prometheus-exporter
+      sudo systemctl daemon-reload
+      sudo systemctl start nginx-prometheus-exporter
+      sudo systemctl enable nginx-prometheus-exporter
+            
+
+      # Configurer le syslog pour envoyer les logs à la machine graylog
+      sudo bash -c 'cat <<EOF > /etc/rsyslog.d/10-graylog.conf
+*.* @192.168.33.13:5514;RSYSLOG_SyslogProtocol23Format
+EOF'
+
+      # Redémarrer le service rsyslog
+      sudo systemctl restart rsyslog
+    SHELL
+  end
+
+# Définir la machine virtuelle grafana
+config.vm.define "grafana" do |grafana|
+  grafana.vm.hostname = "grafana"
+  grafana.vm.provider "virtualbox" do |v|
+    v.memory = 4096
+    v.cpus = 2
+  end
+
+  # Configurer le réseau privé
+  grafana.vm.network "private_network", ip: "192.168.33.12"
+
+  # Configurer le provisionnement
+  grafana.vm.provision "shell", inline: <<-SHELL
+    # Installer les dépendances
+    sudo apt-get update
+    sudo apt-get install -y apt-transport-https software-properties-common wget curl
+
+    # Ajouter le dépôt grafana
+    wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+    sudo add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
+
+    # Installer grafana
+    sudo apt-get update
+    sudo apt-get install -y grafana
+
+    # Démarrer et activer le service
+    sudo systemctl start grafana-server
+    sudo systemctl enable grafana-server
+    # Configurer le datasource prometheus
+    sudo bash -c 'cat <<EOF > /etc/grafana/provisioning/datasources/prometheus.yaml
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+  type: prometheus
+  access: proxy
+  url: http://192.168.33.10:9090
+  isDefault: true
+  version: 1
+  editable: true
+EOF'
+
+    # Redémarrer le service grafana
+    sudo systemctl restart grafana-server
+    sleep 5
+  SHELL
+
+  # Exécuter le script_bash_grafana
+  grafana.vm.provision "shell", path: "script_tools/script_bash_grafana.sh"
+end
+
+  # Définir la machine virtuelle graylog
+  config.vm.define "graylog" do |graylog|
+  graylog.vm.hostname = "graylog"
+    
+  graylog.vm.provider "virtualbox" do |v|
+      v.memory = 4096
+      v.cpus = 2
+    end
+    # Configurer le réseau privé
+    graylog.vm.network "private_network", ip: "192.168.33.13"
+    # Configurer le provisionnement
+    graylog.vm.provision "shell", inline: <<-SHELL
+      # Installer les dépendances
+      sudo apt-get update
+      sudo apt-get install -y apt-transport-https openjdk-8-jre-headless uuid-runtime pwgen wget curl
+      # Ajouter le dépôt mongodb
+      wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
+      echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+      # Ajouter le dépôt elasticsearch
+      wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+      echo "deb https://artifacts.elastic.co/packages/oss-7.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-7.x.list
+      # Ajouter le dépôt graylog
+      wget https://packages.graylog2.org/repo/packages/graylog-4.2-repository_latest.deb
+      sudo dpkg -i graylog-4.2-repository_latest.deb
+      # Installer mongodb, elasticsearch et graylog
+      sudo apt-get update
+      sudo apt-get install -y mongodb-org elasticsearch-oss graylog-server
+      # Configurer elasticsearch
+      sudo sed -i 's/#cluster.name: my-application/cluster.name: graylog/g' /etc/elasticsearch/elasticsearch.yml
+      # Configurer graylog
+      sudo sed -i 's/password_secret =.*/password_secret = $(pwgen -s 96 1)/g' /etc/graylog/server/server.conf
+      # Générer le mot de passe admin
+      sudo sed -i "s/root_password_sha2 =.*/root_password_sha2 = $(echo -n admin | sha256sum | cut -d" " -f1)/g" /etc/graylog/server/server.conf
+      # Configurer l'adresse IP
+      sudo sed -i "s/# Default: 127.0.0.1:9000/Default: 127.0.0.1:9000/g" /etc/graylog/server/server.conf
+      sudo sed -i "s/#http_bind_address = 127.0.0.1:9000/http_bind_address = 192.168.33.13:9000/g" /etc/graylog/server/server.conf
+      # Configurer le collecteur UDP
+      sudo sed -i "s/#inputbuffer_processors = 2/inputbuffer_processors = 2/g" /etc/graylog/server/server.conf
+      sudo sed -i "s/#processbuffer_processors = 5/processbuffer_processors = 5/g" /etc/graylog/server/server.conf
+      sudo sed -i "s/#outputbuffer_processors = 3/outputbuffer_processors = 3/g" /etc/graylog/server/server.conf
+      sudo sed -i "s/#udp_recvbuffer_sizes = 1048576/udp_recvbuffer_sizes = 1048576/g" /etc/graylog/server/server.conf
+      # Démarrer et activer les services
+      sudo systemctl daemon-reload
+      sudo systemctl enable mongod.service
+      sudo systemctl restart mongod.service
+      sudo systemctl enable elasticsearch.service
+      sudo systemctl restart elasticsearch.service
+      sleep 10
+      sudo systemctl enable graylog-server.service
+      sudo systemctl start graylog-server.service
+    SHELL
+  end
+end
