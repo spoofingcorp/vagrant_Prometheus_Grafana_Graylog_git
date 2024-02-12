@@ -12,10 +12,10 @@
 
 ### Prérequis Vagrant
 - Télécharger Vagrant si vous ne l'avez pas
-- Télécharger le dossier compressé `final_v3.7z`
+- Télécharger le repôt Git
 - Créer un dossier dans votre répertoire perso Windows - `vagrant-conf`
 - Dézipper les fichier contenu dans le dossier compressé dans le répertoire créer précédemment
-- Ouvrir le dossier` vagrant-conf` avec **VScode** ou un Terminal 
+- Ouvrir le dossier `vagrant-conf` avec **VScode** ou un Terminal 
 - Se placer dans le path du répertoire comportant le vangrantfile
 - Lancer la commande `vangrant up`
 - Accepter les pop-up UAC Windows pour Virtuabox
@@ -32,13 +32,13 @@
 
 
 # LAB - Collecter les metrics Nginx sur Prometheus
-## DEJA CONFIGER AVEC VAGRANT PROCCESS A TITRE D'EXEMPLE :warning 
+## DEJA CONFIGER AVEC VAGRANT PROCCESS A TITRE D'EXEMPLE :warning: 
 
 Pour collecter des métriques d'un serveur web Nginx sur Ubuntu 20.04 à l'aide de Prometheus, vous devez configurer Prometheus pour qu'il scrape les données de Nginx. Voici les étapes à suivre :
 
 ### Sur le serveur web Nginx (Ubuntu 20.04) 
 
-### DEJA REALISER AVEC VAGRANT PROCCESS A TITRE D'EXEMPLE :warning 
+### DEJA REALISER AVEC VAGRANT PROCCESS A TITRE D'EXEMPLE :warning: 
 
 ### Configurer le site par défaut pour exposer les métriques de Nginx
 
