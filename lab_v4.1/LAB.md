@@ -22,7 +22,10 @@
 
 ### Services
 - Se référer au Diagram de la toplogie ci-dessus pour les IP et tester les services
-- Login Grafana et Graylog (admin/admin)
+- Login Console Web:  Grafana et Graylog (admin/admin)
+- SSH Vagrant - Se conencter à une VM créer avec Vagrant:
+  - Se placer dans le dossier vagrant en Terminal puis `vagrant ssh web`
+  - Pour les autres VM idem, changer seulement le nom de la VM `vagrant ssh grafana` ...
 
 
 ### Stress test HTTP - Python
@@ -158,9 +161,9 @@ Après avoir configuré les deux serveurs, Prometheus commencera à scraper les 
 
 ### FIN DU PROCESS DEJA REALISER AVEC VAGRANTFILE :warning: 
 
-# LAB- Interroger PromQL en GUI
+# LAB - Interroger PromQL en GUI
 
-### :warning Penser à générer du trafic avec les scripts de stress test 
+### :warning: Penser à générer du trafic avec les scripts de stress test 
 
 [Script_python_stress_test_HTTP](script_tools/stress_test.py)
 
