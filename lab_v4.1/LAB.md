@@ -102,9 +102,9 @@ wget https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v0.
       
 ### Démarrer et activer le service nginx-prometheus-exporter
 
-`sudo systemctl daemon-reload`
-`sudo systemctl start nginx-prometheus-exporter`
-`sudo systemctl enable nginx-prometheus-exporter`
+`sudo systemctl daemon-reload`  
+`sudo systemctl start nginx-prometheus-exporter`  
+`sudo systemctl enable nginx-prometheus-exporter`  
 
 
 - L'option `-nginx.scrape-uri` doit pointer vers l'URI de votre serveur Nginx où les métriques sont exposées (par exemple, `http://localhost/metrics` si vous avez configuré Nginx comme indiqué précédemment).
@@ -156,7 +156,7 @@ En suivant ces étapes, `nginx-prometheus-exporter` fonctionnera comme un servic
 
 Après avoir configuré les deux serveurs, Prometheus commencera à scraper les métriques de Nginx à l'intervalle spécifié dans sa configuration. Vous pouvez visualiser ces métriques via l'interface utilisateur web de Prometheus ou les utiliser dans des tableaux de bord Grafana.
 
-### FIN DU PROCESS DEJA REALISER AVEC VAGRANTFILE
+### FIN DU PROCESS DEJA REALISER AVEC VAGRANTFILE :warning: 
 
 # LAB- Interroger PromQL en GUI
 
