@@ -141,7 +141,7 @@ server {
   root /var/www/html;
 
   location / {
-          try_files $uri $uri/ =404;
+        try_files $uri $uri/ =404;
   }
 
   location /metrics {
@@ -234,7 +234,7 @@ config.vm.define "grafana" do |grafana|
     sudo systemctl start grafana-server
     sudo systemctl enable grafana-server
     # Configurer le datasource prometheus
-    sudo bash -c 'cat <<EOF > /etc/grafana/provisioning/datasources/prometheus.yaml
+    sudo bash -c 'cat <<EOF > /etc/grafana/provisioning/datasources/prometheus.yml
 apiVersion: 1
 
 datasources:
