@@ -530,7 +530,7 @@ sudo sed -i 's|#http_tls_cert_file = /path/to/graylog.crt|http_tls_cert_file = /
 sudo sed -i 's|#http_tls_key_file = /path/to/graylog.key|http_tls_key_file = /etc/graylog/server/certs/graylog-privatekey.pem|g' /etc/graylog/server/server.conf
 sudo sed -i "s/#http_bind_address = 127.0.0.1:9000/http_bind_address = 192.168.33.13:9000/g" /etc/graylog/server/server.conf
 # Modification du fichier de configuration d'Opensearch
-sudo sed -i '/http_bind_address = 192.168.33.13:9000/a http_bind_address = srv-graylog.facet23.lan:9000' /etc/opensearch/opensearch.yml
+sudo sed -i '/http_bind_address = 192.168.33.13:9000/a http_bind_address = srv-graylog.lab.lan:9000' /etc/opensearch/opensearch.yml
   
 sudo systemctl daemon-reload
 sudo systemctl enable graylog-server.service
