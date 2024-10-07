@@ -252,7 +252,7 @@ Voici un guide complet pour configurer l'alerting dans Grafana, en se concentran
 1. **Obtention de l'URL de Webhook Discord** :
    - Créez un webhook dans Discord et copiez l'URL.
 2. **Ajout d'un Canal de Notification dans Grafana** :
-   - Dans Grafana, allez dans "Configuration" -> "Notification Channels".
+   - Dans Grafana, allez dans "Alerting" -> "Contact Point".
    - Ajoutez un nouveau canal, sélectionnez "Discord" comme type, et collez l'URL du webhook Discord.
    - Nommez le canal et configurez les options supplémentaires.
 3. **Association du Canal à l'Alerte** :
